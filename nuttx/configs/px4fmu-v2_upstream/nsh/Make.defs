@@ -37,6 +37,8 @@ include ${TOPDIR}/.config
 include ${TOPDIR}/tools/Config.mk
 include ${TOPDIR}/arch/arm/src/armv7-m/Toolchain.defs
 
+CONFIG_ARMV7M_TOOLCHAIN        := GNU_EABI
+
 CC = $(CROSSDEV)gcc
 CXX = $(CROSSDEV)g++
 CPP = $(CROSSDEV)gcc -E
@@ -46,11 +48,17 @@ NM = $(CROSSDEV)nm
 OBJCOPY = $(CROSSDEV)objcopy
 OBJDUMP = $(CROSSDEV)objdump
 
+MAXOPTIMIZATION		 = -Os
+
 ARCHCPUFLAGS = -mcpu=cortex-m4 \
     -mthumb \
     -march=armv7e-m \
     -mfpu=fpv4-sp-d16 \
     -mfloat-abi=hard
+
+# enable precise stack overflow tracking
+INSTRUMENTATIONDEFINES   = -finstrument-functions \
+                           -ffixed-r10
 
 # Pull in *just* libm from the toolchain ... this is grody
 
@@ -110,6 +118,7 @@ endif
 ARCHCFLAGS = -std=gnu99
 ARCHCXXFLAGS = -fno-exceptions -fno-rtti -std=gnu++0x
 ARCHWARNINGS = -Wall \
+    -Wno-sign-compare \
     -Wextra \
     -Wdouble-promotion \
     -Wshadow \
@@ -141,7 +150,7 @@ ARCHPICFLAGS = -fpic -msingle-pic-base -mpic-register=r10
 EXTRA_LIBS += --warn-common \
     --gc-sections
 
-CFLAGS = $(ARCHCFLAGS) $(ARCHCWARNINGS) $(ARCHOPTIMIZATION) $(ARCHCPUFLAGS) $(ARCHINCLUDES) $(ARCHDEFINES) $(EXTRADEFINES) -pipe -fno-common
+CFLAGS = $(ARCHCFLAGS) $(ARCHCWARNINGS) $(ARCHOPTIMIZATION) $(ARCHCPUFLAGS) $(ARCHINCLUDES) $(INSTRUMENTATIONDEFINES) $(ARCHDEFINES) $(EXTRADEFINES) -pipe -fno-common
 CPICFLAGS = $(ARCHPICFLAGS) $(CFLAGS)
 CXXFLAGS = $(ARCHCXXFLAGS) $(ARCHWARNINGSXX) $(ARCHOPTIMIZATION) $(ARCHCPUFLAGS) $(ARCHXXINCLUDES) $(INSTRUMENTATIONDEFINES) $(ARCHDEFINES) $(EXTRADEFINES) -pipe
 CXXPICFLAGS = $(ARCHPICFLAGS) $(CXXFLAGS)

@@ -463,6 +463,9 @@ static int  stm32_dmasendsetup(FAR struct sdio_dev_s *dev,
               FAR const uint8_t *buffer, size_t buflen);
 #endif
 
+#ifdef CONFIG_STM32_SDIO_PROBES
+static void stm32_probe(FAR struct sdio_dev_s *dev,int p, bool s);
+#endif
 /* Initialization/uninitialization/reset ************************************/
 
 static void stm32_callback(void *arg);
@@ -510,6 +513,9 @@ struct stm32_dev_s g_sdiodev =
 #endif
     .dmarecvsetup     = stm32_dmarecvsetup,
     .dmasendsetup     = stm32_dmasendsetup,
+#endif
+#ifdef CONFIG_STM32_SDIO_PROBES
+    .probe = stm32_probe
 #endif
   },
 };
@@ -1125,7 +1131,7 @@ static void stm32_eventtimeout(int argc, uint32_t arg)
   struct stm32_dev_s *priv = (struct stm32_dev_s *)arg;
 
   /* There is always race conditions with timer expirations. */
-
+  PROBE_MARK(1);
   DEBUGASSERT((priv->waitevents & SDIOWAIT_TIMEOUT) != 0 || priv->wkupevent != 0);
 
   /* Is a data transfer complete event expected? */
@@ -1237,7 +1243,6 @@ static void stm32_endtransfer(struct stm32_dev_s *priv, sdio_eventset_t wkupeven
 /****************************************************************************
  * Interrrupt Handling
  ****************************************************************************/
-
 /****************************************************************************
  * Name: stm32_interrupt
  *
@@ -1264,7 +1269,7 @@ static int stm32_interrupt(int irq, void *context)
    * the same in both the STA and MASK register).  If there are non-zero
    * bits remaining, then we have work to do here.
    */
-
+  PROBE(4,true);
   while ((enabled = getreg32(STM32_SDIO_STA) & getreg32(STM32_SDIO_MASK)) != 0)
     {
       /* Handle in progress, interrupt driven data transfers ****************/
@@ -1434,6 +1439,7 @@ static int stm32_interrupt(int irq, void *context)
         }
     }
 
+  PROBE(4,false);
   return OK;
 }
 
@@ -1966,7 +1972,7 @@ static int stm32_waitresponse(FAR struct sdio_dev_s *dev, uint32_t cmd)
     }
 
   /* Then wait for the response (or timeout) */
-
+  PROBE(2,true);
   while ((getreg32(STM32_SDIO_STA) & events) == 0)
     {
       if (--timeout <= 0)
@@ -1974,11 +1980,14 @@ static int stm32_waitresponse(FAR struct sdio_dev_s *dev, uint32_t cmd)
           fdbg("ERROR: Timeout cmd: %08x events: %08x STA: %08x\n",
                cmd, events, getreg32(STM32_SDIO_STA));
 
+          PROBE_MARK(2);
+          PROBE(2,false);
           return -ETIMEDOUT;
         }
     }
 
   putreg32(SDIO_CMDDONE_ICR, STM32_SDIO_ICR);
+  PROBE(2,false);
   return OK;
 }
 
@@ -2293,6 +2302,7 @@ static sdio_eventset_t stm32_eventwait(FAR struct sdio_dev_s *dev,
    */
 
   flags = irqsave();
+  PROBE(1,true);
   DEBUGASSERT(priv->waitevents != 0 || priv->wkupevent != 0);
 
   /* Check if the timeout event is specified in the event set */
@@ -2362,6 +2372,7 @@ static sdio_eventset_t stm32_eventwait(FAR struct sdio_dev_s *dev,
 errout:
   irqrestore(flags);
   stm32_dumpsamples(priv);
+  PROBE(1,false);
   return wkupevent;
 }
 
@@ -2797,7 +2808,9 @@ FAR struct sdio_dev_s *sdio_initialize(int slotno)
   stm32_configgpio(GPIO_SDIO_CK);
   stm32_configgpio(GPIO_SDIO_CMD);
 #endif
-
+#if defined(CONFIG_STM32_SDIO_PROBES)
+  PROBE_INIT(PROBE_N(1)|PROBE_N(2)|PROBE_N(3)|PROBE_N(4)|PROBE_N(5)|PROBE_N(6));
+#endif
   /* Reset the card and assure that it is in the initial, unconfigured
    * state.
    */
@@ -2805,6 +2818,28 @@ FAR struct sdio_dev_s *sdio_initialize(int slotno)
   stm32_reset(&priv->dev);
   return &g_sdiodev.dev;
 }
+
+#ifdef CONFIG_STM32_SDIO_PROBES
+static void stm32_probe(FAR struct sdio_dev_s *dev,int p, bool s)
+{
+	switch (p)
+	  {
+	    case 1: p = PROBE_1;
+		  break;
+		case 2: p = PROBE_2;
+		  break;
+		case 3: p = PROBE_3;
+		  break;
+		case 4: p = PROBE_4;
+		  break;
+		case 5: p = PROBE_5;
+		  break;
+		case 6: p = PROBE_6;
+		  break;
+	  }
+      stm32_gpiowrite(p,s);
+}
+#endif
 
 /****************************************************************************
  * Name: sdio_mediachange

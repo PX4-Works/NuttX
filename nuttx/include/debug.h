@@ -138,6 +138,15 @@
 
 #endif /* CONFIG_DEBUG */
 
+/* Board does not provides GPIO or other Hardware for signaling to timing analyzer */
+
+#if !defined(CONFIG_BOARD_USE_PROBES)
+# define PROBE_INIT(mask)
+# define PROBE(n,s)
+# define PROBE_MARK(n)
+#endif
+
+
 /* Subsystem specific debug */
 
 #ifdef CONFIG_DEBUG_MM

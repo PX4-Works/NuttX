@@ -208,8 +208,8 @@
 
 #define GPIO_USART3_RX   GPIO_USART3_RX_3
 #define GPIO_USART3_TX   GPIO_USART3_TX_3
-#define GPIO_USART2_RTS  GPIO_USART2_RTS_2
-#define GPIO_USART2_CTS  GPIO_USART2_CTS_2
+#define GPIO_USART3_RTS  GPIO_USART3_RTS_2
+#define GPIO_USART3_CTS  GPIO_USART3_CTS_2
 
 #define GPIO_UART4_RX    GPIO_UART4_RX_1
 #define GPIO_UART4_TX    GPIO_UART4_TX_1
@@ -272,6 +272,10 @@
 #define GPIO_SPI2_MOSI   GPIO_SPI2_MOSI_1
 #define GPIO_SPI2_SCK    GPIO_SPI2_SCK_2
 
+#define GPIO_SPI4_MISO	(GPIO_SPI4_MISO_1|GPIO_SPEED_50MHz)
+#define GPIO_SPI4_MOSI	(GPIO_SPI4_MOSI_1|GPIO_SPEED_50MHz)
+#define GPIO_SPI4_SCK	(GPIO_SPI4_SCK_1|GPIO_SPEED_50MHz)
+
 /* LED Definitions.  Needed if CONFIG_ARCH_LEDs is defined */
 
 #define LED_STARTED      0
@@ -282,6 +286,33 @@
 #define LED_SIGNAL       1
 #define LED_ASSERTION    1
 #define LED_PANIC        1
+
+/* Board provides GPIO or other Hardware for signaling to timing analyzer */
+
+#if defined(CONFIG_BOARD_USE_PROBES)
+# define PROBE_N(n) (1<<((n)-1))
+# define PROBE_1	(GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTE|GPIO_PIN14)
+# define PROBE_2	(GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTE|GPIO_PIN13)
+# define PROBE_3	(GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTE|GPIO_PIN11)
+# define PROBE_4	(GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTE|GPIO_PIN9)
+# define PROBE_5	(GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTD|GPIO_PIN13)
+# define PROBE_6	(GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTD|GPIO_PIN14)
+
+# define PROBE_INIT(mask) \
+	do { \
+		if ((mask)& PROBE_N(1)) { stm32_configgpio(PROBE_1); } \
+		if ((mask)& PROBE_N(2)) { stm32_configgpio(PROBE_2); } \
+		if ((mask)& PROBE_N(3)) { stm32_configgpio(PROBE_3); } \
+		if ((mask)& PROBE_N(4)) { stm32_configgpio(PROBE_4); } \
+		if ((mask)& PROBE_N(5)) { stm32_configgpio(PROBE_5); } \
+		if ((mask)& PROBE_N(6)) { stm32_configgpio(PROBE_6); } \
+	} while(0)
+
+# define PROBE(n,s)  do {stm32_gpiowrite(PROBE_##n,(s));}while(0)
+# define PROBE_MARK(n) PROBE(n,false);PROBE(n,true)
+#endif
+
+
 
 /************************************************************************************
  * Public Data
