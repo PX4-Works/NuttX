@@ -925,14 +925,14 @@ struct mmcsd_scr_s decoded;
    *   Reserved               47:32 16-bit SD reserved space
    */
 
-#ifdef CONFIG_ENDIAN_BIG	/* Card transfers SCR in big-endian order */
+#ifdef CONFIG_ENDIAN_BIG  /* Card transfers SCR in big-endian order */
   priv->buswidth     = (scr[0] >> 16) & 15;
 #else
   priv->buswidth     = (scr[0] >> 8) & 15;
 #endif
 
 #if defined(CONFIG_DEBUG) && defined (CONFIG_DEBUG_VERBOSE) && defined(CONFIG_DEBUG_FS)
-#ifdef CONFIG_ENDIAN_BIG	/* Card SCR is big-endian order / CPU also big-endian
+#ifdef CONFIG_ENDIAN_BIG  /* Card SCR is big-endian order / CPU also big-endian
                              *   60   56   52   48   44   40   36   32
                              * VVVV SSSS ESSS BBBB RRRR RRRR RRRR RRRR */
   decoded.scrversion =  scr[0] >> 28;
@@ -1155,6 +1155,15 @@ static int mmcsd_transferready(FAR struct mmcsd_state_s *priv)
    * other operations.  The card will transition from the PROGRAMMING state to
    * the TRANSFER state when the card completes the WRITE operation.
    */
+
+#if defined(CONFIG_MMCSD_HAVE_SDIOWAIT_WRCOMPLETE)
+  ret = mmcsd_eventwait(priv, SDIOWAIT_TIMEOUT|SDIOWAIT_ERROR, MMCSD_BLOCK_WDATADELAY);
+
+  if (ret != OK)
+    {
+      fdbg("ERROR: mmcsd_eventwait for transferready failed: %d\n", ret);
+    }
+#endif
 
   starttime = clock_systimer();
   do
@@ -1738,6 +1747,14 @@ static ssize_t mmcsd_writesingle(FAR struct mmcsd_state_s *priv,
       fdbg("ERROR: CMD24 transfer failed: %d\n", ret);
       goto errout;
     }
+
+#if defined(CONFIG_MMCSD_HAVE_SDIOWAIT_WRCOMPLETE)
+
+  /* Arm the write complete detection with timeout */
+
+  SDIO_WAITENABLE(priv->dev, SDIOWAIT_WRCOMPLETE|SDIOWAIT_TIMEOUT);
+
+#endif
 
   /* On success, return the number of blocks written */
 
