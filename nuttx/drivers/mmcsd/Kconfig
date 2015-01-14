@@ -98,6 +98,17 @@ config SDIO_PREFLIGHT
 	bool
 	default n
 
+config SDIO_PROBES
+	bool "Enable MMC/SDIO Probes"
+	default n
+	---help---
+		Select to use PROBES to provide timing of signals from mmcsd_sdio.c.
+		PROBE_3 -  mmcsd_writesingle
+		PROBE_5 - 1a:mmcsd_transferready  ___----____
+			  2a:mmcsd_sendcmdpoll,mmcsd_recvR1 (pulse prefix __-_------)
+		PROBE_6 - 1b:mmcsd_setblocklen ___----____
+			  2b:SDIO_BLOCKSETUP,SDIO_WAITENABLE, SDIO_DMASENDSETUP  (pulse prefix __-_------)
+
 config SDIO_MUXBUS
 	bool "SDIO bus share support"
 	default n

@@ -72,6 +72,11 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+/* Redefine the Probe methods */
+
+# define SDIO_PROBE_MARK(dev,probe) SDIO_PROBE((dev),probe,false); \
+                                    SDIO_PROBE((dev),probe,true)
+
 /* The maximum number of references on the driver (because a uint8_t is used.
  * Use a larger type if more references are needed.
  */
@@ -1139,6 +1144,7 @@ static int mmcsd_transferready(FAR struct mmcsd_state_s *priv)
       return OK;
     }
 
+
   /* The card is still present and the last transfer was a write transfer.
    * Loop, querying the card state.  Return when (1) the card is in the TRANSFER
    * state, (2) the card stays in the PROGRAMMING state too long, or (3) the
@@ -1616,7 +1622,8 @@ static ssize_t mmcsd_writesingle(FAR struct mmcsd_state_s *priv,
                                  FAR const uint8_t *buffer, off_t startblock)
 {
   off_t offset;
-  int ret;
+  int ret = -EPERM;
+  SDIO_PROBE(priv->dev,3,true);
 
   fvdbg("startblock=%d\n", startblock);
   DEBUGASSERT(priv != NULL && buffer != NULL);
@@ -1628,7 +1635,8 @@ static ssize_t mmcsd_writesingle(FAR struct mmcsd_state_s *priv,
   if (mmcsd_wrprotected(priv))
     {
       fdbg("ERROR: Card is locked or write protected\n");
-      return -EPERM;
+      goto errout;
+
     }
 
 #if defined(CONFIG_SDIO_DMA) && defined(CONFIG_SDIO_PREFLIGHT)
@@ -1642,7 +1650,7 @@ static ssize_t mmcsd_writesingle(FAR struct mmcsd_state_s *priv,
 
       if (ret != OK)
         {
-          return ret;
+          goto errout;
         }
     }
 #endif
@@ -1654,11 +1662,13 @@ static ssize_t mmcsd_writesingle(FAR struct mmcsd_state_s *priv,
    * transfer allows for more overlap and, hopefully, better performance
    */
 
+  SDIO_PROBE(priv->dev,5,true);
   ret = mmcsd_transferready(priv);
+  SDIO_PROBE(priv->dev,5,false);
   if (ret != OK)
     {
       fdbg("ERROR: Card not ready: %d\n", ret);
-      return ret;
+      goto errout;
     }
 
   /* If this is a byte addressed SD card, then convert sector start sector
@@ -1678,25 +1688,32 @@ static ssize_t mmcsd_writesingle(FAR struct mmcsd_state_s *priv,
 
   /* Select the block size for the card */
 
+  SDIO_PROBE(priv->dev,6,true);
   ret = mmcsd_setblocklen(priv, priv->blocksize);
+  SDIO_PROBE(priv->dev,6,false);
   if (ret != OK)
     {
       fdbg("ERROR: mmcsd_setblocklen failed: %d\n", ret);
-      return ret;
+      goto errout;
     }
 
   /* Send CMD24, WRITE_BLOCK, and verify that good R1 status is returned */
 
+  SDIO_PROBE(priv->dev,5,true);
+  SDIO_PROBE_MARK(priv->dev,5);
   mmcsd_sendcmdpoll(priv, MMCSD_CMD24, offset);
   ret = mmcsd_recvR1(priv, MMCSD_CMD24);
+  SDIO_PROBE(priv->dev,5,false);
   if (ret != OK)
     {
       fdbg("ERROR: mmcsd_recvR1 for CMD24 failed: %d\n", ret);
-      return ret;
+      goto errout;
     }
 
   /* Configure SDIO controller hardware for the write transfer */
 
+  SDIO_PROBE(priv->dev,6,true);
+  SDIO_PROBE_MARK(priv->dev,6);
   SDIO_BLOCKSETUP(priv->dev, priv->blocksize, 1);
   SDIO_WAITENABLE(priv->dev, SDIOWAIT_TRANSFERDONE|SDIOWAIT_TIMEOUT|SDIOWAIT_ERROR);
 #ifdef CONFIG_SDIO_DMA
@@ -1706,7 +1723,7 @@ static ssize_t mmcsd_writesingle(FAR struct mmcsd_state_s *priv,
       if (ret != OK)
         {
           fvdbg("SDIO_DMASENDSETUP: error %d\n", ret);
-          return ret;
+          goto errout;
         }
     }
   else
@@ -1714,6 +1731,7 @@ static ssize_t mmcsd_writesingle(FAR struct mmcsd_state_s *priv,
     {
       SDIO_SENDSETUP(priv->dev, buffer, priv->blocksize);
     }
+  SDIO_PROBE(priv->dev,6,false);
 
   /* Flag that a write transfer is pending that we will have to check for
    * write complete at the beginning of the next transfer.
@@ -1727,7 +1745,7 @@ static ssize_t mmcsd_writesingle(FAR struct mmcsd_state_s *priv,
   if (ret != OK)
     {
       fdbg("ERROR: CMD24 transfer failed: %d\n", ret);
-      return ret;
+      goto errout;
     }
 
 #if defined(CONFIG_MMCSD_HAVE_SDIOWAIT_WRCOMPLETE)
@@ -1737,10 +1755,18 @@ static ssize_t mmcsd_writesingle(FAR struct mmcsd_state_s *priv,
   SDIO_WAITENABLE(priv->dev, SDIOWAIT_WRCOMPLETE|SDIOWAIT_TIMEOUT);
 
 #endif
+  ret = 1;
+  goto okout;
 
+errout:
+  SDIO_PROBE_MARK(priv->dev,3);
+  SDIO_PROBE_MARK(priv->dev,3);
+  SDIO_PROBE_MARK(priv->dev,3);
+  SDIO_PROBE_MARK(priv->dev,3);
   /* On success, return the number of blocks written */
-
-  return 1;
+okout:
+  SDIO_PROBE(priv->dev,3,false);
+  return ret;
 }
 #endif
 

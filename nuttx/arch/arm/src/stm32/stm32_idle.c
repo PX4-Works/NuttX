@@ -202,6 +202,8 @@ void up_idle(void)
    * STM32107 Ethernet peripheral is enabled.
    */
 
+  PROBE(1,true);
+  PROBE_MARK(1);
 #if !defined(CONFIG_STM32_CONNECTIVITYLINE) || !defined(CONFIG_STM32_ETHMAC)
 #if !(defined(CONFIG_DEBUG_SYMBOLS) && defined(CONFIG_STM32_DISABLE_IDLE_SLEEP_DURING_DEBUG))
   BEGIN_IDLE();
@@ -209,5 +211,6 @@ void up_idle(void)
   END_IDLE();
 #endif
 #endif
+  PROBE(1,false);
 #endif
 }

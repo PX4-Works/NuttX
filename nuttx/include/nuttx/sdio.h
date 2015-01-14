@@ -786,6 +786,28 @@
 #endif
 
 /****************************************************************************
+ * Name: SDIO_PROBE
+ *
+ * Description:
+ *   Used to display timing of the
+ *
+ * Input Parameters:
+ *   dev    - An instance of the SDIO device interface
+ *   proben - The number of the probe to set
+ *   state  - The new state as a bool
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SDIO_PROBES
+# define SDIO_PROBE(dev,proben,state) ((dev)->probe(dev,proben,state))
+#else
+# define  SDIO_PROBE(dev,proben,state)
+#endif
+
+/****************************************************************************
  * Public Types
  ****************************************************************************/
 
@@ -883,6 +905,10 @@ struct sdio_dev_s
   int   (*dmasendsetup)(FAR struct sdio_dev_s *dev,
           FAR const uint8_t *buffer, size_t buflen);
 #endif
+#ifdef CONFIG_SDIO_PROBES
+  void   (*probe)(FAR struct sdio_dev_s *dev, int probe, bool state);
+#endif
+
 };
 
 /****************************************************************************

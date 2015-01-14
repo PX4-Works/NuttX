@@ -3203,6 +3203,16 @@ endmenu
 menu "SDIO Configuration"
 	depends on STM32_SDIO
 
+config STM32_SDIO_PROBES
+	bool "SDIO PROBES"
+	default n
+	depends on STM32_SDIO && BOARD_USE_PROBES
+	---help---
+		Select to use PROBES to provide timing of signals from stm32_sdio.c.
+		PROBE_1 - stm32_eventwait
+		PROBE_2 - stm32_waitresponse
+		PROBE_4 - stm32_interrupt and stm32_rdyinterrupt
+
 config SDIO_DMA
 	bool "Support DMA data transfers"
 	default y if STM32_DMA2
