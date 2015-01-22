@@ -77,6 +77,16 @@ config ARMV7M_STACKCHECK
 		Currently only available only for the STM32 architecture.  The changes
 		are not complex and patches for other architectures will be accepted.
 
+config ARMV7M_STACKCHECK_NOINIT
+       bool "Prevent the stack;s memory from being set to 0xff"
+       default n
+       depends on ARCH_CHIP_STM32
+       ---help---
+           If enabled this will not initialize stack memory. If it is disabled
+           the stacks' memory will be initialized to all 0xff and can be tested
+           for penetration. One reason to enable this feature would be for
+           a Minior performace benifit.
+
 config ARMV7M_ITMSYSLOG
 	bool "ITM SYSLOG support"
 	default n
