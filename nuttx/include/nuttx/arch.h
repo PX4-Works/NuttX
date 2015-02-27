@@ -51,7 +51,7 @@
  *    architecture-specific implementation in arch/
  *
  *    NOTE: up_ is supposed to stand for microprocessor; the u is like the
- *    Greek letter micron: µ. So it would be µP which is a common shortening
+ *    Greek letter micron: ï¿½. So it would be ï¿½P which is a common shortening
  *    of the word microprocessor.
  *
  * 2. Microprocessor-Specific Interfaces.
@@ -1836,6 +1836,35 @@ uint8_t board_buttons(void);
 
 #ifdef CONFIG_ARCH_IRQBUTTONS
 xcpt_t board_button_irq(int id, xcpt_t irqhandler);
+#endif
+
+/****************************************************************************
+ * Name: board_crashdump
+ *
+ * Description:
+ *   If CONFIG_BOARD_CRASHDUMP is selected then up_asseert will call out to
+ *   board_crashdump prior to calling exit in the case of an assertion failure.
+ *   Or in the case of a hardfault looping indefinitely. board_crashdump then
+ *   has a chance to save the state of the machine. The provided
+ *   board_crashdump should save as much information as it can about the cause
+ *   of the fault and then most likely reset the system.
+ *
+ *   N.B. There are limited system resources that can be used by the provided
+ *   board_crashdump function. The tems from the fact that most critical/fatal
+ *   crashes are because of a hard fault or during interrupt processing.
+ *   In these cases, up_assert is running from the context of an interrupt
+ *   handlerand it is impossible to use any device driver in this context.
+ *
+ *   Also consider the following: Who knows what state the system is in? Is
+ *   memory trashed? Is the Heap intact? Therefore all we can expect to do in
+ *   board_crashdump is save the "machine state" in a place where on the next
+ *   reset we can write it to more sophisticated storage in a sane operating
+ *   environment.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_BOARD_CRASHDUMP
+void board_crashdump(uint32_t currentsp, void *tcb, uint8_t *filename, int lineno);
 #endif
 
 /****************************************************************************
